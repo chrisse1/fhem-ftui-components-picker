@@ -1,0 +1,6 @@
+#!/bin/bash
+# Keeps controls_ftuipicker.txt in sync with www/ftui before every commit.
+# Activate once with: git config core.hooksPath .githooks
+
+bash prepare_update.sh
+git add controls_ftuipicker.txt

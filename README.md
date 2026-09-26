@@ -21,13 +21,44 @@ ins Reading, damit beim Durchscrollen nicht jeder Zwischenwert an FHEM geht.
 
 ## Installation
 
-Den Ordner `picker` in das Komponenten-Verzeichnis der FTUI-Installation kopieren:
+### Über FHEM update (empfohlen)
+
+Im FHEM-Kommandofeld:
 
 ```
-<fhem>/www/ftui/components/picker/picker.component.js
+update add https://raw.githubusercontent.com/chrisse1/fhem-ftui-components-picker/main/controls_ftuipicker.txt
+update
 ```
 
-z. B. direkt auf dem FHEM-Server:
+`update add` merkt sich die Kontrolldatei in `FHEM/controls.txt`, ab dann wird
+der Picker bei jedem `update` mit aktualisiert. Ein Neustart von FHEM ist nicht
+nötig – es werden nur Dateien unter `www/` installiert. Im Browser einmal mit
+Strg+F5 neu laden, damit die neue Datei nicht aus dem Cache kommt.
+
+Nützliche Varianten:
+
+```
+update check                 zeigt, was sich geändert hat, ohne es zu installieren
+update list                  zeigt alle eingetragenen Kontrolldateien
+update delete https://raw.githubusercontent.com/chrisse1/fhem-ftui-components-picker/main/controls_ftuipicker.txt
+```
+
+Einmalig installieren, ohne die Kontrolldatei dauerhaft einzutragen:
+
+```
+update all https://raw.githubusercontent.com/chrisse1/fhem-ftui-components-picker/main/controls_ftuipicker.txt
+```
+
+Installiert werden:
+
+| Datei | |
+|---|---|
+| `www/ftui/components/picker/picker.component.js` | die Komponente |
+| `www/ftui/examples/picker.html` | Beispielseite |
+
+### Von Hand
+
+Genauso gut kann man die eine Datei direkt kopieren:
 
 ```bash
 cd /opt/fhem/www/ftui/components
@@ -36,9 +67,9 @@ wget -O picker/picker.component.js \
   https://raw.githubusercontent.com/chrisse1/fhem-ftui-components-picker/main/www/ftui/components/picker/picker.component.js
 ```
 
-Mehr ist nicht nötig – FTUI lädt die Komponente automatisch, sobald ein
-`<ftui-picker>` auf der Seite steht. Es muss nichts eingebunden oder
-registriert werden.
+In beiden Fällen ist damit alles erledigt – FTUI lädt die Komponente
+automatisch, sobald ein `<ftui-picker>` auf der Seite steht. Es muss nichts
+eingebunden oder registriert werden.
 
 ## Schnellstart
 
@@ -301,6 +332,28 @@ python3 -m http.server 8000
 
 Die Demo ersetzt die FTUI-Basisklasse über eine Import-Map durch
 `demo/ftui-element.stub.js`. In FTUI selbst wird davon nichts gebraucht.
+
+## Kontrolldatei für FHEM update
+
+`controls_ftuipicker.txt` listet jede installierbare Datei mit exakter Größe
+und Zeitstempel – FHEM lädt eine Datei erst neu, wenn sich eines von beidem
+ändert, und bricht ab, wenn die heruntergeladene Datei nicht exakt die
+angegebene Größe hat. Nach jeder Änderung unterhalb von `www/ftui/` muss sie
+deshalb neu erzeugt werden:
+
+```bash
+./prepare_update.sh
+```
+
+Der Zeitstempel unveränderter Dateien bleibt dabei erhalten, gelöschte Dateien
+bleiben als `MOV … unused` stehen und verschwinden dadurch auch aus bestehenden
+Installationen. Wer möchte, lässt das automatisch vor jedem Commit laufen:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Die Datei `CHANGED` zeigt FHEM beim Update als Änderungshinweis an.
 
 ## Tests
 
