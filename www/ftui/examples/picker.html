@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <!--
+    /* FHEM tablet ui - FTUI */
+    /**
+    * Example page for the ftui-picker component
+    *
+    * Copyright (c) 2026 chrisse1
+    * Under MIT License (http://www.opensource.org/licenses/mit-license.php)
+    * https://github.com/chrisse1/fhem-ftui-components-picker
+    */
+    -->
+  <base href="../" />
+  <script src="ftui.js"></script>
+  <link href="ftui.css" rel="stylesheet">
+  <link href="themes/ftui-theme.css" rel="stylesheet">
+  <link href="favicon.ico" rel="icon" type="image/x-icon" />
+
+  <title>FTUI Example Picker</title>
+</head>
+
+<body>
+
+  <ftui-grid>
+
+    <ftui-grid-tile row="1" col="1" height="2" width="1">
+      <ftui-grid-header>TIME hh:mm</ftui-grid-header>
+      <ftui-picker mode="time" value="07:30"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="1" col="2" height="2" width="1">
+      <ftui-grid-header>TIME hh:mm:ss</ftui-grid-header>
+      <ftui-picker mode="time" format="hh:mm:ss" value="06:45:00"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="1" col="3" height="2" width="1">
+      <ftui-grid-header>5 MINUTE STEPS</ftui-grid-header>
+      <ftui-picker mode="time" minute-step="5" rows="3" value="06:15"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="1" col="4" height="2" width="2">
+      <ftui-grid-header>DATE dd.mm.yyyy</ftui-grid-header>
+      <ftui-picker mode="date" value="24.12.2026"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="3" col="1" height="2" width="2">
+      <ftui-grid-header>DATE WITH MONTH NAMES</ftui-grid-header>
+      <ftui-picker mode="date" month-format="short" locale="de-DE"
+        min-year="2026" max-year="2030">
+      </ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="3" col="3" height="2" width="1">
+      <ftui-grid-header>NUMBER 5..30 / 0.5</ftui-grid-header>
+      <ftui-picker mode="number" min="5" max="30" step="0.5" unit="&deg;C" value="21.5"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="3" col="4" height="2" width="1">
+      <ftui-grid-header>NUMBER 0..100 / 5</ftui-grid-header>
+      <ftui-picker mode="number" min="0" max="100" step="5" unit="%" value="40"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="3" col="5" height="2" width="1">
+      <ftui-grid-header>LIST</ftui-grid-header>
+      <ftui-picker mode="list" list="Aus,Eco,Komfort,Party,Urlaub" value="Komfort"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="5" col="1" height="2" width="1">
+      <ftui-grid-header>class="size-2"</ftui-grid-header>
+      <ftui-picker class="size-2" mode="time" value="12:00"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="5" col="2" height="2" width="2">
+      <ftui-grid-header>class="size-4" flat</ftui-grid-header>
+      <ftui-picker class="size-4" flat mode="time" value="22:00"></ftui-picker>
+    </ftui-grid-tile>
+
+    <!-- ============ FHEM bindings ============ -->
+
+    <ftui-grid-tile row="5" col="4" height="2" width="2">
+      <ftui-grid-header>READING IN AND OUT</ftui-grid-header>
+      <!-- reads dummy1:time and writes the new value back after 1 second -->
+      <ftui-picker mode="time" debounce="1000" [(value)]="dummy1:time"></ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="7" col="1" height="2" width="2">
+      <ftui-grid-header>SET COMMAND</ftui-grid-header>
+      <!-- reads the reading, writes with a FHEM set command after 2 seconds -->
+      <ftui-picker mode="time"
+        delay="2000"
+        [value]="Heizung:desiredTime"
+        (value)="set Heizung desiredTime $value">
+      </ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="7" col="3" height="2" width="2">
+      <ftui-grid-header>TEMPERATURE SET</ftui-grid-header>
+      <ftui-picker mode="number" min="5" max="30" step="0.5" unit="&deg;C"
+        [value]="Thermostat:desired-temp"
+        (value)="set Thermostat desired-temp $value">
+      </ftui-picker>
+    </ftui-grid-tile>
+
+    <ftui-grid-tile row="7" col="5" height="2" width="1">
+      <ftui-grid-header>EVENT</ftui-grid-header>
+      <ftui-picker mode="time"
+        value="08:00"
+        @value-change="console.log('written: ' + $event.detail)">
+      </ftui-picker>
+    </ftui-grid-tile>
+
+  </ftui-grid>
+
+</body>
+
+</html>

@@ -1,0 +1,4 @@
+2026-09-26  ftui-picker
+Erste Version: Picker im iOS-Stil für FTUI 3 mit den Betriebsarten time,
+date, number und list, skalierbar über die size-x Klassen und mit
+einstellbarer Verzögerung, bevor der Wert nach FHEM geschrieben wird.

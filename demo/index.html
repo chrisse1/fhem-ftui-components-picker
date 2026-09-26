@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ftui-picker &ndash; Demo</title>
+
+  <!--
+    The import map replaces FTUI's base class with a small stub, so this page
+    works without a FHEM/FTUI installation. Inside FTUI nothing of this is
+    needed - the component is loaded automatically.
+  -->
+  <script type="importmap">
+    {
+      "imports": {
+        "../www/ftui/components/element.component.js": "./ftui-element.stub.js"
+      }
+    }
+  </script>
+  <script type="module" src="../www/ftui/components/picker/picker.component.js"></script>
+
+  <style>
+    :root {
+      --text-color: #e7e7ea;
+      --color-base: #46a0f0;
+      --border-color: #3a3a40;
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      background: #17171a;
+      color: var(--text-color);
+      font-family: "HelveticaNeue-Light", "Segoe UI", "Roboto", sans-serif;
+      font-weight: 300;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 300;
+      margin: 0 0 1.5rem;
+    }
+
+    .tiles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .tile {
+      background: #22222a;
+      border: 1px solid var(--border-color);
+      border-radius: 0.6rem;
+      padding: 0.8rem 1rem 1rem;
+      min-width: 12rem;
+    }
+
+    .tile header {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.55;
+      margin-bottom: 0.4rem;
+    }
+
+    .tile output {
+      display: block;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      font-family: monospace;
+      color: var(--color-base);
+      min-height: 1.2em;
+    }
+
+    ftui-picker {
+      --picker-highlight-color: rgba(255, 255, 255, 0.09);
+    }
+
+    /* the size-x classes of ftui.css - shown here for the scaling demo */
+    .size--1 { font-size: 0.75em; }
+    .size-0 { font-size: 1em; }
+    .size-1 { font-size: 1.25em; }
+    .size-2 { font-size: 1.5em; }
+    .size-3 { font-size: 1.75em; }
+    .size-4 { font-size: 2em; }
+    .size-6 { font-size: 3em; }
+  </style>
+</head>
+
+<body>
+  <h1>&lt;ftui-picker&gt; &ndash; iOS style wheel picker for FTUI 3</h1>
+
+  <div class="tiles">
+
+    <div class="tile">
+      <header>time &ndash; hh:mm</header>
+      <ftui-picker id="p1" mode="time" value="07:30"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>time &ndash; hh:mm:ss</header>
+      <ftui-picker id="p2" mode="time" format="hh:mm:ss" value="18:45:10"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>time &ndash; 5 minute steps</header>
+      <ftui-picker id="p3" mode="time" minute-step="5" value="06:15" rows="3"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>date &ndash; dd.mm.yyyy</header>
+      <ftui-picker id="p4" mode="date" value="24.12.2026"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>date &ndash; month names, ISO</header>
+      <ftui-picker id="p5" mode="date" format="yyyy-mm-dd" month-format="short" locale="de-DE"
+        value="2026-09-26"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>number &ndash; 5 &hellip; 30 / 0.5</header>
+      <ftui-picker id="p6" mode="number" min="5" max="30" step="0.5" unit="&deg;C" value="21.5"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>number &ndash; 0 &hellip; 100 / 5</header>
+      <ftui-picker id="p7" mode="number" min="0" max="100" step="5" unit="%" value="40"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>list</header>
+      <ftui-picker id="p8" mode="list" list="Aus,Eco,Komfort,Party,Urlaub" value="Komfort"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>class="size-2"</header>
+      <ftui-picker id="p9" class="size-2" mode="time" value="12:00"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>class="size-4", flat</header>
+      <ftui-picker id="p10" class="size-4" flat mode="time" value="22:00"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>delay 3000 ms</header>
+      <ftui-picker id="p11" mode="time" debounce="3000" value="09:00"></ftui-picker>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>delay 0 (immediately)</header>
+      <ftui-picker id="p12" mode="time" debounce="0" value="09:00"></ftui-picker>
+      <output></output>
+    </div>
+
+  </div>
+
+  <script>
+    document.querySelectorAll('ftui-picker').forEach(picker => {
+      const output = picker.parentElement.querySelector('output');
+      const log = (text) => { output.textContent = text; };
+      log('value = ' + picker.getAttribute('value'));
+      picker.addEventListener('select', event => log('selected: ' + event.detail + ' …'));
+      picker.addEventListener('valueChange', event => log('value = ' + event.detail));
+    });
+  </script>
+</body>
+
+</html>
