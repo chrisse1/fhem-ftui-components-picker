@@ -51,7 +51,7 @@ update all https://raw.githubusercontent.com/chrisse1/fhem-ftui-components-picke
 
 Installiert werden:
 
-| Datei | |
+| Datei | Zweck |
 |---|---|
 | `www/ftui/components/picker/picker.component.js` | die Komponente |
 | `www/ftui/examples/picker.html` | Beispielseite |
