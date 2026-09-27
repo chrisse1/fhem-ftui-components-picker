@@ -17,6 +17,10 @@ import { FtuiElement } from '../element.component.js';
 const BLOCKS = 5;
 // ms without a scroll event until a wheel is treated as "settled"
 const SETTLE_TIME = 140;
+// safety net: a finger is never treated as lying on the glass for longer
+const HOLD_LIMIT = 15000;
+// how often it is checked whether the delay can start now
+const ARM_POLL = 200;
 // rotation per row for the 3D effect
 const ROW_ANGLE = 18;
 // perspective for the 3D effect, in em of the picker font size
@@ -100,12 +104,14 @@ class FtuiPickerWheel {
     this.element.addEventListener('scroll', () => this.onScroll(), { passive: true });
     this.element.addEventListener('click', (event) => this.onClick(event));
     this.element.addEventListener('keydown', (event) => this.onKeyDown(event));
+    // touch is tracked on its own: while scrolling, the browser takes over
+    // the gesture and fires pointercancel although the finger is still down
     this.element.addEventListener('pointerdown', () => this.picker.onPointerDown(), { passive: true });
-    this.element.addEventListener('touchstart', () => this.picker.onPointerDown(), { passive: true });
     this.element.addEventListener('pointerup', () => this.picker.onPointerUp(), { passive: true });
     this.element.addEventListener('pointercancel', () => this.picker.onPointerUp(), { passive: true });
-    this.element.addEventListener('touchend', () => this.picker.onPointerUp(), { passive: true });
-    this.element.addEventListener('touchcancel', () => this.picker.onPointerUp(), { passive: true });
+    this.element.addEventListener('touchstart', () => this.picker.onTouchStart(), { passive: true });
+    this.element.addEventListener('touchend', () => this.picker.onTouchEnd(), { passive: true });
+    this.element.addEventListener('touchcancel', () => this.picker.onTouchEnd(), { passive: true });
     this.element.addEventListener('wheel', () => this.picker.markBusy(), { passive: true });
   }
 
@@ -309,6 +315,10 @@ class FtuiPickerWheel {
     if (changed) {
       this.picker.onWheelChanged(this);
     } else {
+      if (byUser) {
+        // scrolled around and ended up on the same value again
+        this.picker.scheduleSubmit();
+      }
       this.picker.maybeApplyDeferred();
     }
   }
@@ -407,7 +417,9 @@ export class FtuiPicker extends FtuiElement {
     this.deferredValue = null;
     this.deferTimer = null;
     this.pointerActive = false;
-    this.pointerDeadline = 0;
+    this.touchCount = 0;
+    this.holdDeadline = 0;
+    this.armTimer = null;
     this.fittedRows = 0;
     this.fitShrinks = 0;
     this.busyUntil = 0;
@@ -629,6 +641,7 @@ export class FtuiPicker extends FtuiElement {
 
   onDisconnected() {
     clearTimeout(this.submitTimer);
+    clearTimeout(this.armTimer);
     clearTimeout(this.deferTimer);
     this.resizeObserver.disconnect();
     window.removeEventListener('pointerup', this.onWindowPointerUp);
@@ -1082,7 +1095,20 @@ export class FtuiPicker extends FtuiElement {
   get isBusy() {
     return this.isUserInput
       || this.pendingValue !== null
-      || this.wheels.some(wheel => wheel.settleTimer !== null);
+      || this.isMoving;
+  }
+
+  /** true while at least one wheel is still moving */
+  get isMoving() {
+    return this.wheels.some(wheel => wheel.settleTimer !== null);
+  }
+
+  /**
+   * True while a finger lies on the picker or a mouse button is held down.
+   * The deadline is a safety net for a touchend that never arrives.
+   */
+  get isHolding() {
+    return (this.touchCount > 0 || this.pointerActive) && Date.now() < this.holdDeadline;
   }
 
   /**
@@ -1091,10 +1117,7 @@ export class FtuiPicker extends FtuiElement {
    * by the user - everything else is the browser moving the wheels around.
    */
   get isUserInput() {
-    // the pointer deadline is a safety net: should a pointerup ever get
-    // lost, the picker must not ignore FHEM updates forever
-    return (this.pointerActive && Date.now() < this.pointerDeadline)
-      || Date.now() < this.busyUntil;
+    return this.isHolding || Date.now() < this.busyUntil;
   }
 
   /** marks the picker as busy for a short while (mouse wheel, click, keys) */
@@ -1104,12 +1127,34 @@ export class FtuiPicker extends FtuiElement {
 
   onPointerDown() {
     this.pointerActive = true;
-    this.pointerDeadline = Date.now() + 15000;
-    this.markBusy();
+    this.onHoldStart();
   }
 
   onPointerUp() {
     this.pointerActive = false;
+    this.onHoldEnd();
+  }
+
+  onTouchStart() {
+    this.touchCount++;
+    this.onHoldStart();
+  }
+
+  onTouchEnd() {
+    this.touchCount = Math.max(0, this.touchCount - 1);
+    this.onHoldEnd();
+  }
+
+  /** the user grabs the picker - a running delay is reset */
+  onHoldStart() {
+    this.holdDeadline = Date.now() + HOLD_LIMIT;
+    this.markBusy();
+    this.holdSubmit();
+  }
+
+  /** the user lets go - the delay may start once the wheels stand still */
+  onHoldEnd() {
+    this.scheduleSubmit();
     this.maybeApplyDeferred();
   }
 
@@ -1140,21 +1185,61 @@ export class FtuiPicker extends FtuiElement {
 
   startSubmit(value) {
     clearTimeout(this.submitTimer);
+    this.submitTimer = null;
     this.pendingValue = value;
-    const delay = this.effectiveDelay;
     this.emitEvent('select', value);
+    if (this.effectiveDelay <= 0) {
+      // no delay was asked for - write it right away
+      this.commit();
+      return;
+    }
+    this.scheduleSubmit();
+  }
+
+  /**
+   * Starts the delay, but only once the user has let go and the wheels
+   * stand still. Grabbing the picker again resets it - see holdSubmit().
+   * As long as something is in the way, it keeps checking back, so a
+   * pending value can never get stuck.
+   */
+  scheduleSubmit() {
+    if (this.pendingValue === null) {
+      return;
+    }
+    clearTimeout(this.armTimer);
+    this.armTimer = null;
+    if (this.isHolding || this.isMoving) {
+      this.armTimer = setTimeout(() => this.scheduleSubmit(), ARM_POLL);
+      return;
+    }
+    const delay = this.effectiveDelay;
     if (delay <= 0) {
       this.commit();
       return;
     }
+    clearTimeout(this.submitTimer);
     this.showPending(delay);
     this.submitTimer = setTimeout(() => this.commit(), delay);
+  }
+
+  /** the user reached for the picker again - stop the delay, keep the value */
+  holdSubmit() {
+    if (this.pendingValue === null) {
+      return;
+    }
+    clearTimeout(this.submitTimer);
+    this.submitTimer = null;
+    this.hidePending();
+    clearTimeout(this.armTimer);
+    this.armTimer = setTimeout(() => this.scheduleSubmit(), ARM_POLL);
   }
 
   /** writes the selected value to the value attribute (and to FHEM) */
   commit() {
     clearTimeout(this.submitTimer);
+    clearTimeout(this.armTimer);
     this.submitTimer = null;
+    this.armTimer = null;
     this.hidePending();
     const value = this.pendingValue;
     this.pendingValue = null;
@@ -1176,7 +1261,9 @@ export class FtuiPicker extends FtuiElement {
   /** public: drop a pending change without writing it */
   cancelPending() {
     clearTimeout(this.submitTimer);
+    clearTimeout(this.armTimer);
     this.submitTimer = null;
+    this.armTimer = null;
     this.pendingValue = null;
     this.hidePending();
   }

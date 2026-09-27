@@ -274,6 +274,58 @@ const resized = await page.evaluate(async () => {
 t('rows=auto grows with the container', resized.grown > 3, true);
 t('rows=auto shrinks again', resized.back < 2.5, true);
 
+// 14) the delay waits for the finger: it starts on release, a new grab resets it
+const held = await page.evaluate(async () => {
+  const picker = document.getElementById('p1');
+  picker.setAttribute('value', '07:30');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const log = [];
+  const started = performance.now();
+  const at = () => Math.round(performance.now() - started);
+  picker.addEventListener('valueChange', event => log.push({ value: event.detail, at: at() }));
+  const wheel = picker.shadowRoot.querySelector('.wheel');
+  wheel.dispatchEvent(new Event('pointerdown'));
+  wheel.scrollTop += 2 * picker.itemPx;
+  await new Promise(resolve => setTimeout(resolve, 900));     // finger stays down
+  const whileHeld = { written: log.length, value: picker.getAttribute('value') };
+  const release = at();
+  wheel.dispatchEvent(new Event('pointerup'));
+  await new Promise(resolve => setTimeout(resolve, 800));
+  return { whileHeld, release, log };
+});
+t('nothing is written while the finger stays down', held.whileHeld.written, 0);
+t('the value is still the old one then', held.whileHeld.value, '07:30');
+t('written once after letting go', held.log.length, 1);
+t('written ~delay after the release', Math.abs((held.log[0].at - held.release) - 500) < 250, true);
+
+const regrab = await page.evaluate(async () => {
+  const picker = document.getElementById('p1');
+  picker.setAttribute('value', '07:30');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const log = [];
+  const started = performance.now();
+  const at = () => Math.round(performance.now() - started);
+  picker.addEventListener('valueChange', event => log.push({ value: event.detail, at: at() }));
+  const wheel = picker.shadowRoot.querySelector('.wheel');
+  wheel.dispatchEvent(new Event('pointerdown'));
+  wheel.scrollTop += 2 * picker.itemPx;
+  wheel.dispatchEvent(new Event('pointerup'));
+  await new Promise(resolve => setTimeout(resolve, 350));     // delay is running
+  const running = log.length;
+  wheel.dispatchEvent(new Event('pointerdown'));              // grabbed again
+  await new Promise(resolve => setTimeout(resolve, 700));     // longer than the delay
+  const afterRegrab = log.length;
+  const release = at();
+  wheel.dispatchEvent(new Event('pointerup'));
+  await new Promise(resolve => setTimeout(resolve, 800));
+  return { running, afterRegrab, release, log };
+});
+t('the delay is running before the new grab', regrab.running, 0);
+t('a new grab stops the delay', regrab.afterRegrab, 0);
+t('written after the second release', regrab.log.length, 1);
+t('and only once, with the final value', regrab.log[0] && regrab.log[0].value, '09:30');
+t('counted from the second release', Math.abs((regrab.log[0].at - regrab.release) - 500) < 250, true);
+
 // 11) a picker created at runtime (e.g. by ftui-content) with zero padding
 const dynamic = await page.evaluate(async () => {
   // like ftui-content does it: the element comes from parsed HTML

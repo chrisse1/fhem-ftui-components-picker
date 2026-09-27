@@ -1,2 +1,2 @@
-UPD 2026-09-27_06:44:45 37249 www/ftui/components/picker/picker.component.js
+UPD 2026-09-27_07:25:52 39677 www/ftui/components/picker/picker.component.js
 UPD 2026-09-26_20:21:10 4245 www/ftui/examples/picker.html
