@@ -408,6 +408,8 @@ export class FtuiPicker extends FtuiElement {
     this.deferTimer = null;
     this.pointerActive = false;
     this.pointerDeadline = 0;
+    this.fittedRows = 0;
+    this.fitShrinks = 0;
     this.busyUntil = 0;
     this.isInitialized = true;
 
@@ -430,6 +432,16 @@ export class FtuiPicker extends FtuiElement {
           --picker-rows: 5;
           --picker-item-height: 1.6em;
           --rows-half: calc((var(--picker-rows) - 1) / 2);
+          /* the fade is measured from the centre in item heights, not in
+             percent, so the selected row stays fully visible no matter how
+             many rows there are - down to two or even one */
+          --fade: linear-gradient(to bottom,
+            transparent 0,
+            rgba(0, 0, 0, 0.45) calc(50% - var(--picker-item-height)),
+            #000 calc(50% - var(--picker-item-height) / 2),
+            #000 calc(50% + var(--picker-item-height) / 2),
+            rgba(0, 0, 0, 0.45) calc(50% + var(--picker-item-height)),
+            transparent 100%);
           position: relative;
           display: flex;
           flex-direction: row;
@@ -474,10 +486,8 @@ export class FtuiPicker extends FtuiElement {
           -ms-overflow-style: none;
           outline: none;
           cursor: grab;
-          -webkit-mask-image: var(--picker-mask, linear-gradient(to bottom,
-            transparent 0%, rgba(0, 0, 0, 0.45) 22%, #000 42%, #000 58%, rgba(0, 0, 0, 0.45) 78%, transparent 100%));
-          mask-image: var(--picker-mask, linear-gradient(to bottom,
-            transparent 0%, rgba(0, 0, 0, 0.45) 22%, #000 42%, #000 58%, rgba(0, 0, 0, 0.45) 78%, transparent 100%));
+          -webkit-mask-image: var(--picker-mask, var(--fade));
+          mask-image: var(--picker-mask, var(--fade));
         }
         .wheel::-webkit-scrollbar {
           width: 0;
@@ -565,6 +575,7 @@ export class FtuiPicker extends FtuiElement {
       mode: 'time',
       format: '',
       rows: 5,
+      maxRows: 5,
       min: 0,
       max: 100,
       step: 1,
@@ -608,6 +619,9 @@ export class FtuiPicker extends FtuiElement {
       this.style.color = this.color;
     }
     this.resizeObserver.observe(this);
+    if (this.parentElement) {
+      this.resizeObserver.observe(this.parentElement);
+    }
     window.addEventListener('pointerup', this.onWindowPointerUp, { passive: true });
     this.measure();
     requestAnimationFrame(() => this.measure());
@@ -629,8 +643,10 @@ export class FtuiPicker extends FtuiElement {
         this.applyValue(value);
         break;
       case 'rows':
-        this.container.style.setProperty('--picker-rows', String(this.effectiveRows));
-        this.wheels.forEach(wheel => { wheel.tiltWindow = Math.ceil(this.effectiveRows / 2) + 1; });
+      case 'max-rows':
+        this.fittedRows = 0;
+        this.fitShrinks = 0;
+        this.applyRows();
         this.measure();
         break;
       case 'width':
@@ -674,9 +690,77 @@ export class FtuiPicker extends FtuiElement {
     return this.format || DEFAULT_FORMAT[this.effectiveMode] || '';
   }
 
+  /** true for rows="auto" - the picker then fits into the space it gets */
+  get isAutoRows() {
+    const raw = this.getAttribute('rows');
+    return raw !== null && /^\s*(auto|fit)\s*$/i.test(raw);
+  }
+
+  get maxEffectiveRows() {
+    const rows = Number(this.getAttribute('max-rows'));
+    return Number.isFinite(rows) && rows > 0 ? limit(rows, 1, 15) : 5;
+  }
+
+  /**
+   * Visible rows. Fractional values are allowed and useful: with 2 rows the
+   * selected row sits in the middle and half a row peeks in above and below,
+   * which is what fits into a tight tile.
+   */
   get effectiveRows() {
-    const rows = Math.round(this.rows) || 5;
-    return limit(rows % 2 === 0 ? rows + 1 : rows, 3, 15);
+    if (this.isAutoRows) {
+      return this.fittedRows || this.maxEffectiveRows;
+    }
+    const rows = Number(this.getAttribute('rows'));
+    return Number.isFinite(rows) && rows > 0 ? limit(rows, 1, 15) : 5;
+  }
+
+  /**
+   * For rows="auto": takes the height the surrounding element offers and
+   * derives the number of rows from it, never more than max-rows.
+   */
+  fitRows() {
+    if (!this.isAutoRows || !this.itemPx) {
+      return false;
+    }
+    const max = this.maxEffectiveRows;
+    let rows = max;
+    const parent = this.parentElement;
+    if (parent) {
+      const style = window.getComputedStyle(parent);
+      const own = window.getComputedStyle(this);
+      const available = parent.clientHeight
+        - parseFloat(style.paddingTop || 0) - parseFloat(style.paddingBottom || 0)
+        - parseFloat(own.marginTop || 0) - parseFloat(own.marginBottom || 0);
+      if (available > 0) {
+        rows = limit(Math.floor((available / this.itemPx) * 100) / 100, 1, max);
+      }
+    }
+    const previous = this.fittedRows || 0;
+    if (Math.abs(rows - previous) < 0.02) {
+      return false;
+    }
+    if (rows < previous) {
+      // do not chase a container that shrinks together with the picker
+      if (this.fitShrinks >= 3) {
+        return false;
+      }
+      this.fitShrinks++;
+    } else {
+      this.fitShrinks = 0;
+    }
+    this.fittedRows = rows;
+    return true;
+  }
+
+  /** hands the current row count over to CSS and re-centres the wheels */
+  applyRows() {
+    const rows = this.effectiveRows;
+    this.container.style.setProperty('--picker-rows', String(rows));
+    this.wheels.forEach(wheel => {
+      wheel.tiltWindow = Math.ceil(rows / 2) + 1;
+      wheel.setIndex(wheel.index);
+    });
+    this.requestRender();
   }
 
   /** submit delay in ms - "delay" is an alias of "debounce" */
@@ -717,7 +801,6 @@ export class FtuiPicker extends FtuiElement {
   }
 
   rebuild() {
-    this.container.style.setProperty('--picker-rows', String(this.effectiveRows));
     this.wheels = [];
     this.tokens = [];
     this.wheelsElement.textContent = '';
@@ -755,6 +838,7 @@ export class FtuiPicker extends FtuiElement {
       this.wheelsElement.appendChild(unit);
     }
 
+    this.container.style.setProperty('--picker-rows', String(this.effectiveRows));
     this.measure();
     this.applyValue(this.value);
     // park every wheel at its position - without a value nothing was
@@ -891,7 +975,11 @@ export class FtuiPicker extends FtuiElement {
     const changed = Math.abs(height - this.itemPx) > 0.5;
     this.itemPx = height;
     if (changed) {
+      this.fitShrinks = 0;
       this.wheels.forEach(wheel => wheel.setIndex(wheel.index));
+    }
+    if (this.fitRows()) {
+      this.applyRows();
     }
     this.requestRender();
   }
