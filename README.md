@@ -220,11 +220,41 @@ Schriftgröße des Elements. Jede FTUI-Größenklasse wirkt also direkt:
 <ftui-picker class="size-6"  mode="time" value="12:00"></ftui-picker>
 ```
 
-Die Anzahl der sichtbaren Zeilen steuert `rows` (ungerade, 3 … 15):
+Die Anzahl der sichtbaren Zeilen steuert `rows` (1 … 15):
 
 ```html
 <ftui-picker mode="time" rows="3"></ftui-picker>
 <ftui-picker mode="time" rows="7"></ftui-picker>
+```
+
+### Wenn der Platz knapp ist
+
+Die ausgewählte Zeile sitzt immer in der Mitte des Pickers. Ist der Picker
+höher als die Kachel, in der er steckt, schneidet die Kachel ihn unten ab –
+und die Auswahl steht dann optisch nicht mehr mittig, sondern am unteren Rand.
+Der Picker muss in diesem Fall also niedriger werden.
+
+`rows` nimmt dafür auch gerade und gebrochene Werte an:
+
+```html
+<!-- zwei Zeilen hoch: die Auswahl in der Mitte, darüber und darunter
+     schaut je eine halbe Zeile hervor -->
+<ftui-picker mode="time" rows="2"></ftui-picker>
+
+<!-- nur die ausgewählte Zeile, ohne Nachbarn -->
+<ftui-picker mode="time" rows="1"></ftui-picker>
+
+<!-- Zwischenwerte gehen auch -->
+<ftui-picker mode="time" rows="2.5"></ftui-picker>
+```
+
+Oder man überlässt es dem Picker. Mit `rows="auto"` nimmt er die Höhe, die
+ihm sein umgebendes Element lässt, höchstens aber `max-rows` (Standard 5).
+Ändert sich die Höhe später, passt er sich an:
+
+```html
+<ftui-picker mode="time" rows="auto"></ftui-picker>
+<ftui-picker mode="time" rows="auto" max-rows="7"></ftui-picker>
 ```
 
 Alles Weitere über CSS-Variablen – sie werden von außen vererbt und lassen
@@ -272,7 +302,8 @@ sehr langsamen Tablets):
 | `value` | Text | – | ausgewählter Wert, Ein- und Ausgabe |
 | `mode` | `time`, `date`, `number`, `list` | `time` | Betriebsart |
 | `format` | z. B. `hh:mm`, `dd.mm.yyyy` | je Modus | Räder und Trennzeichen |
-| `rows` | ungerade Zahl 3 … 15 | `5` | sichtbare Zeilen |
+| `rows` | Zahl 1 … 15 oder `auto` | `5` | sichtbare Zeilen, gerade und gebrochene Werte erlaubt; `auto` passt sich an die verfügbare Höhe an |
+| `max-rows` | Zahl 1 … 15 | `5` | Obergrenze für `rows="auto"` |
 | `debounce` | ms | `500` | Verzögerung bis zum Schreiben |
 | `delay` | ms | – | Alias für `debounce` |
 | `no-indicator` | – | aus | Fortschrittsbalken ausblenden |

@@ -78,6 +78,18 @@
       --picker-highlight-color: rgba(255, 255, 255, 0.09);
     }
 
+    /* a row of a settings page: fixed height, only room for ~2 picker rows */
+    .cramped {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      height: 3.2rem;
+      overflow: hidden;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+    }
+
     /* the size-x classes of ftui.css - shown here for the scaling demo */
     .size--1 { font-size: 0.75em; }
     .size-0 { font-size: 1em; }
@@ -156,6 +168,42 @@
     </div>
 
     <div class="tile">
+      <header>rows="3" in a tile that only fits 2 rows</header>
+      <div class="cramped">
+        <span>Licht an?</span>
+        <ftui-picker id="p13" mode="time" rows="3" value="06:30"></ftui-picker>
+      </div>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>rows="2" &ndash; fits and stays centred</header>
+      <div class="cramped">
+        <span>Licht an?</span>
+        <ftui-picker id="p14" mode="time" rows="2" value="06:30"></ftui-picker>
+      </div>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>rows="auto" &ndash; takes what it gets</header>
+      <div class="cramped">
+        <span>Licht an?</span>
+        <ftui-picker id="p15" mode="time" rows="auto" value="06:30"></ftui-picker>
+      </div>
+      <output></output>
+    </div>
+
+    <div class="tile">
+      <header>rows="1" &ndash; only the selected row</header>
+      <div class="cramped">
+        <span>Licht an?</span>
+        <ftui-picker id="p16" mode="time" rows="1" value="06:30"></ftui-picker>
+      </div>
+      <output></output>
+    </div>
+
+    <div class="tile">
       <header>delay 3000 ms</header>
       <ftui-picker id="p11" mode="time" debounce="3000" value="09:00"></ftui-picker>
       <output></output>
@@ -171,7 +219,7 @@
 
   <script>
     document.querySelectorAll('ftui-picker').forEach(picker => {
-      const output = picker.parentElement.querySelector('output');
+      const output = picker.closest('.tile').querySelector('output');
       const log = (text) => { output.textContent = text; };
       log('value = ' + picker.getAttribute('value'));
       picker.addEventListener('select', event => log('selected: ' + event.detail + ' …'));

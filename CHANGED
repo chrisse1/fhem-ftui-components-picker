@@ -1,3 +1,8 @@
+2026-09-27  ftui-picker
+rows nimmt jetzt auch gerade und gebrochene Werte an und kennt "auto": der
+Picker passt sich an die Höhe an, die ihm seine Kachel lässt, damit die
+ausgewählte Zeile auch bei wenig Platz mittig steht statt am unteren Rand.
+
 2026-09-26  ftui-picker
 Erste Version: Picker im iOS-Stil für FTUI 3 mit den Betriebsarten time,
 date, number und list, skalierbar über die size-x Klassen und mit

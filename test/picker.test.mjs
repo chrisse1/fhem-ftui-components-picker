@@ -220,6 +220,60 @@ t('center item is not rotated', Math.abs(parseFloat(tilt.selTransform.match(/rot
 t('neighbour item is rotated ~18deg', Math.abs(parseFloat(tilt.neighbour.match(/rotateX\((-?[\d.]+)deg/)[1]) + 18) < 1, true);
 t('flat mode has no transform', tilt.flatItem, '');
 
+// 12) tight tiles: the picker has to fit and keep the selection centred
+const measureTile = () => {
+  const read = (id) => {
+    const picker = document.getElementById(id);
+    const box = picker.shadowRoot.querySelector('.picker').getBoundingClientRect();
+    const tile = picker.parentElement.getBoundingClientRect();
+    const selected = [...picker.shadowRoot.querySelectorAll('.item')]
+      .find(item => item.classList.contains('selected'));
+    const selectedBox = selected.getBoundingClientRect();
+    const top = Math.max(box.top, tile.top);
+    const bottom = Math.min(box.bottom, tile.bottom);
+    return {
+      rows: Number(picker.effectiveRows.toFixed(2)),
+      cutOff: Number((box.height - (bottom - top)).toFixed(1)),
+      offCentre: Math.abs((selectedBox.top + selectedBox.height / 2) - (top + bottom) / 2),
+      rowsHigh: Math.round(box.height / picker.itemPx),
+    };
+  };
+  return { three: read('p13'), two: read('p14'), auto: read('p15'), one: read('p16') };
+};
+const tight = await page.evaluate(measureTile);
+t('rows=3 does not fit into the tile (the reported problem)', tight.three.cutOff > 10, true);
+t('... and pushes the selection below the centre', tight.three.offCentre > 5, true);
+t('rows=2 fits into the tile', tight.two.cutOff, 0);
+t('rows=2 is two rows high', tight.two.rowsHigh, 2);
+t('rows=2 keeps the selection centred', tight.two.offCentre < 1, true);
+t('rows=auto fits into the tile', tight.auto.cutOff, 0);
+t('rows=auto took less than max-rows', tight.auto.rows < 5, true);
+t('rows=auto keeps the selection centred', tight.auto.offCentre < 1, true);
+t('rows=1 is one row high', tight.one.rowsHigh, 1);
+t('rows=1 keeps the selection centred', tight.one.offCentre < 1, true);
+
+// 13) rows=auto has to settle and to follow a resized container
+const settled = await page.evaluate(async () => {
+  const picker = document.getElementById('p15');
+  const first = picker.effectiveRows;
+  await new Promise(resolve => setTimeout(resolve, 600));
+  return { first: Number(first.toFixed(2)), later: Number(picker.effectiveRows.toFixed(2)) };
+});
+t('rows=auto settles instead of oscillating', settled.later, settled.first);
+
+const resized = await page.evaluate(async () => {
+  const picker = document.getElementById('p15');
+  const tile = picker.parentElement;
+  tile.style.height = '6rem';
+  await new Promise(resolve => setTimeout(resolve, 500));
+  const grown = Number(picker.effectiveRows.toFixed(2));
+  tile.style.height = '3.2rem';
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { grown, back: Number(picker.effectiveRows.toFixed(2)) };
+});
+t('rows=auto grows with the container', resized.grown > 3, true);
+t('rows=auto shrinks again', resized.back < 2.5, true);
+
 // 11) a picker created at runtime (e.g. by ftui-content) with zero padding
 const dynamic = await page.evaluate(async () => {
   // like ftui-content does it: the element comes from parsed HTML
