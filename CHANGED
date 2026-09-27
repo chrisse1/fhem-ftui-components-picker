@@ -1,4 +1,9 @@
 2026-09-27  ftui-picker
+Die Wartezeit vor dem Schreiben beginnt jetzt beim Loslassen und erst, wenn
+die Räder stillstehen. Greift man nach, wird sie zurückgesetzt und startet
+beim nächsten Loslassen von vorn.
+
+2026-09-27  ftui-picker
 rows nimmt jetzt auch gerade und gebrochene Werte an und kennt "auto": der
 Picker passt sich an die Höhe an, die ihm seine Kachel lässt, damit die
 ausgewählte Zeile auch bei wenig Platz mittig steht statt am unteren Rand.

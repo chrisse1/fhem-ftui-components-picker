@@ -172,10 +172,19 @@ optional die dazugehörigen Werte.
 ## Verzögertes Schreiben (Delay)
 
 Beim Scrollen soll nicht jeder Zwischenwert an FHEM gehen. Deshalb wird der
-ausgewählte Wert erst nach einer einstellbaren Zeit geschrieben – gemessen ab
-dem Moment, in dem ein Rad stehen bleibt. Wird innerhalb dieser Zeit weiter
-gescrollt, beginnt die Wartezeit von vorn; geschrieben wird nur der zuletzt
-ausgewählte Wert.
+ausgewählte Wert erst nach einer einstellbaren Zeit geschrieben.
+
+Die Wartezeit beginnt, wenn man den Picker loslässt **und** die Räder
+stillstehen – also beim späteren der beiden Ereignisse:
+
+* Lässt man mit Schwung los und das Rad rollt noch aus, beginnt sie erst,
+  wenn es steht. Sonst würde ein Zwischenwert geschrieben.
+* Bleibt der Finger nach dem Ziehen liegen, beginnt sie erst beim Abheben.
+* Greift man nach, wird sie gestoppt und startet beim nächsten Loslassen
+  von vorn.
+
+Geschrieben wird immer nur einmal, mit dem zuletzt ausgewählten Wert – auch
+wenn zwischendurch mehrere Räder verstellt wurden.
 
 ```html
 <!-- Standard: 500 ms -->
@@ -187,12 +196,14 @@ ausgewählte Wert.
 <!-- "delay" ist ein Alias für "debounce", ebenfalls in Millisekunden -->
 <ftui-picker mode="time" delay="2000" [(value)]="dummy1:time"></ftui-picker>
 
-<!-- ohne Verzögerung, sofort schreiben -->
+<!-- ohne Verzögerung: schreibt, sobald das Rad steht, ohne aufs
+     Loslassen zu warten -->
 <ftui-picker mode="time" debounce="0" [(value)]="dummy1:time"></ftui-picker>
 ```
 
 Ab 250 ms zeigt ein dünner Fortschrittsbalken am unteren Rand an, wie lange es
-noch bis zum Schreiben dauert. Mit `no-indicator` lässt er sich abschalten.
+noch bis zum Schreiben dauert – er läuft also erst ab dem Loslassen. Mit
+`no-indicator` lässt er sich abschalten.
 
 Während der Wartezeit und während des Scrollens werden Updates aus FHEM
 zurückgehalten, damit einem das Rad nicht unter dem Finger wegspringt. Sie
@@ -304,7 +315,7 @@ sehr langsamen Tablets):
 | `format` | z. B. `hh:mm`, `dd.mm.yyyy` | je Modus | Räder und Trennzeichen |
 | `rows` | Zahl 1 … 15 oder `auto` | `5` | sichtbare Zeilen, gerade und gebrochene Werte erlaubt; `auto` passt sich an die verfügbare Höhe an |
 | `max-rows` | Zahl 1 … 15 | `5` | Obergrenze für `rows="auto"` |
-| `debounce` | ms | `500` | Verzögerung bis zum Schreiben |
+| `debounce` | ms | `500` | Verzögerung ab dem Loslassen bis zum Schreiben |
 | `delay` | ms | – | Alias für `debounce` |
 | `no-indicator` | – | aus | Fortschrittsbalken ausblenden |
 | `cyclic` | `true`/`false` | `true` | Endlos-Räder für Stunden, Minuten, Sekunden, Tag und Monat |
